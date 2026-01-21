@@ -30,13 +30,12 @@ CGCAPlot::~CGCAPlot()
 int CGCAPlot::track_distance_to_x() const
 {
 	const auto distance = this->label_->get_track_distance();
-	return this->track_area_.left + this->max_range_ / this->track_area_.Width() * distance;
+	return this->track_area_.left + distance / this->max_range_ * this->track_area_.Width(); // EDIT FROM: return this->track_area_.left + this->max_range_ / this->track_area_.Width() * distance;
 }
 
 
 double CGCAPlot::get_max_track_error_at_distance() const
 {
-	const auto distance = this->label_->get_track_distance();
 	constexpr auto track_angle = 15.0 * M_PI / 180;
 	const auto straight_distance = this->runway_threshold_.DistanceTo(this->target_.GetPosition().GetPosition());
 	return sin(track_angle) * straight_distance;
@@ -52,19 +51,12 @@ int CGCAPlot::track_error_to_track_y() const
 	return middle + deflection;
 }
 
-void CGCAPlot::plot_track(CDC* dc, CPen* pen) const
-{
-	auto const s_dc = dc->SaveDC();
-	dc->SelectObject(pen);
-	const auto x = this->track_distance_to_x();
-	const auto y = this->track_error_to_track_y();
-	dc->Ellipse(x - 5, y - 5, x + 5, y + 5);
-	dc->RestoreDC(s_dc);
-}
-
 void CGCAPlot::draw_plot(CDC* dc, CPen* plot_pen, CPen* first_error_pen, CPen* second_error_pen) const
 {
 	auto const s_dc = dc->SaveDC();
-	plot_track(dc, plot_pen);
+	dc->SelectObject(plot_pen);
+	const auto x = this->track_distance_to_x();
+	const auto y = this->track_error_to_track_y();
+	dc->Ellipse(x - 5, y - 5, x + 5, y + 5);
 	dc->RestoreDC(s_dc);
 }

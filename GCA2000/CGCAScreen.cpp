@@ -209,7 +209,7 @@ void CGCAScreen::draw_track_axes(CDC* dc, const CRect area, CPen* pen, const uns
 	dc->MoveTo(area.left, area.bottom);
 	dc->LineTo(area.left, area.top);
 	// Draw ticks
-	const auto numVTicks = static_cast<int>(max_track_error / 8000);
+	const auto numVTicks = 4; // EDIT FROM: static_cast<int>(max_track_error / 8000);
 	const auto tickHeight = area.Height() / (2*numVTicks);
 	for (auto i = 0; i <= numVTicks; i++)
 	{
@@ -296,7 +296,7 @@ void CGCAScreen::OnRefresh(const HDC hDC, const int phase)
 	// Get drawing area
 	CRect radar_area = GetRadarArea();
     const CRect chat_area = GetChatArea();
-	radar_area.bottom = chat_area.top;
+	//radar_area.bottom = chat_area.top; //EDIT: Removed unnecessary ?
 	// Add margins
 	radar_area.DeflateRect(75, 50);
     const auto mid_point = radar_area.CenterPoint();
@@ -311,7 +311,7 @@ void CGCAScreen::OnRefresh(const HDC hDC, const int phase)
 	// Set maximum values
 	constexpr unsigned max_range = 20;
 	constexpr unsigned max_alt = 16000;
-	constexpr auto max_track_error = max_alt * 2;
+	constexpr auto max_track_error = 10000;
 	// ### GLIDESLOPE PORTION ###
 	draw_glideslope_axes(&dc, gs_area, &red_pen , max_range, max_alt);
 	// Draw cross
@@ -331,18 +331,22 @@ void CGCAScreen::OnRefresh(const HDC hDC, const int phase)
     for (auto radar_target = GetPlugIn()->RadarTargetSelectFirst(); radar_target.IsValid(); radar_target = GetPlugIn()->RadarTargetSelectNext(radar_target))
 	{
 		auto position = radar_target.GetPosition();
-		const auto distance = position.GetPosition().DirectionTo(runway_position_);
+		auto speed = radar_target.GetGS();
+		const auto distance = position.GetPosition().DistanceTo(runway_position_);
+		
     	// Skip tracks outside of maximum range
-		if (position.GetPosition().DistanceTo(runway_position_) > max_range)
+		if (distance > max_range || speed < 45)
 			continue;
+		
 		// Get angle to runway
 		const auto angle = position.GetPosition().DirectionTo(runway_position_);
 		const auto angle_diff = angle - heading_;
 
+		
 		// Skip tracks outside of bounds
-		if (fabs(angle_diff) > 15)
+		if (fabs(angle_diff) > 45)
 			continue;
-
+		
 		//CGCAPlot plot {radarTarget, RunwayPosition, Altitude, Heading, GlideSlope };
 		const auto *plot = new CGCAPlot(radar_target, runway_position_, gs_area, tk_area, xs_area, max_range, max_alt, 1000, 500,
 		                                altitude_, glide_slope_, heading_);

@@ -19,7 +19,6 @@ public:
 	CGCAPlot(const EuroScopePlugIn::CRadarTarget& target, const EuroScopePlugIn::CPosition& runway_threshold,
 		const CRect& glideslope_area, const CRect& track_area, const CRect& deviation_area, unsigned max_range,
 		unsigned max_alt, int max_track_deviation, int max_glideslope_deviation, int threshold_altitude, double glideslope, int heading);
-	void plot_track(CDC* dc, CPen* pen) const;
 	~CGCAPlot();
 
 protected:

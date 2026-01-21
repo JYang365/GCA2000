@@ -27,8 +27,12 @@ CGCALabel::CGCALabel(const EuroScopePlugIn::CRadarTarget track, const EuroScopeP
 
 void CGCALabel::calculate_track_distance()
 {
-	auto track_angle = this->RunwayThreshold.DirectionTo(this->RadarTrackPosition);
-	track_angle = track_angle * M_PI / 180;
+	auto track_angle = this->RunwayThreshold.DirectionTo(this->RadarTrackPosition); 
+	if (track_angle < 0)
+		track_angle += 180;
+	else
+		track_angle -= 180; //EDIT: corrected calculation of track angle to be relative to final approach heading
+	track_angle = track_angle * M_PI / 180; 
 	const auto straight_distance = this->RunwayThreshold.DistanceTo(this->RadarTrackPosition);
 	this->TrackDistance = cos(track_angle) * straight_distance;
 }
