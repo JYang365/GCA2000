@@ -18,6 +18,8 @@ CGCAPlot::CGCAPlot(const EuroScopePlugIn::CRadarTarget& target, const EuroScopeP
 	this->max_alt_ = max_alt;
 	this->max_track_deviation_ = max_track_deviation;
 	this->max_glideslope_deviation_ = max_glideslope_deviation;
+	this->threshold_altitude_ = threshold_altitude;
+	this->heading_ = heading;
 
 	this->label_ = new CGCALabel(target, runway_threshold, threshold_altitude, heading, glideslope);
 }
@@ -102,12 +104,12 @@ void CGCAPlot::draw_plot(CDC* dc, CPen* plot_pen, CPen* first_error_pen, CPen* s
 		// Draw tag
 		dc->SetTextAlign(TA_LEFT);
 		dc->TextOutA(x, y_gs + 15, callsign.c_str());
-		dc->TextOutA(x, y_gs + 30, height_str.c_str());
-		dc->TextOutA(x, y_gs + 45, altitude_str.c_str());
+		//dc->TextOutA(x, y_gs + 30, height_str.c_str()); //show height above threshold
+		//dc->TextOutA(x, y_gs + 45, altitude_str.c_str()); //show altitude
 
 
 		std::string distance_str = std::to_string(static_cast<double>(this->label_->get_track_distance()));
-		dc->TextOutA(x, y_gs + 60, distance_str.c_str()); //show track miles to THR
+		//dc->TextOutA(x, y_gs + 60, distance_str.c_str()); //show track miles to THR
 		
 
 
