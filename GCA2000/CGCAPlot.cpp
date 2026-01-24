@@ -69,9 +69,11 @@ void CGCAPlot::draw_plot(CDC* dc, CPen* plot_pen, CPen* first_error_pen, CPen* s
 	const double y_gs = + this->gs_error_to_gs_y();
 	std::string callsign = this->label_->get_callsign();
 	double altitude = this->label_->get_altitude();
-	std::string altitude_str = std::to_string(static_cast<double>(altitude));
+	std::string altitude_str = std::to_string(static_cast<int>(round(altitude/10.0)*10.0));
+	altitude_str.append(" ft");
 	double height = altitude - threshold_altitude_;
-	std::string height_str = std::to_string(static_cast<double>(height));
+	std::string height_str = std::to_string(static_cast<int>(round(height / 10.0) * 10.0));
+	height_str.append(" AGL");
 	//Check if inside correct area before drawing
 	if (this->track_area_.PtInRect(CPoint(x, y_track)) && this->glideslope_area_.PtInRect(CPoint(x, y_gs)))
 	{
@@ -104,8 +106,8 @@ void CGCAPlot::draw_plot(CDC* dc, CPen* plot_pen, CPen* first_error_pen, CPen* s
 		// Draw tag
 		dc->SetTextAlign(TA_LEFT);
 		dc->TextOutA(x, y_gs + 15, callsign.c_str());
-		//dc->TextOutA(x, y_gs + 30, height_str.c_str()); //show height above threshold
-		//dc->TextOutA(x, y_gs + 45, altitude_str.c_str()); //show altitude
+		dc->TextOutA(x, y_gs + 30, height_str.c_str()); //show height above threshold
+		dc->TextOutA(x, y_gs + 45, altitude_str.c_str()); //show altitude
 
 
 		std::string distance_str = std::to_string(static_cast<double>(this->label_->get_track_distance()));
@@ -115,8 +117,6 @@ void CGCAPlot::draw_plot(CDC* dc, CPen* plot_pen, CPen* first_error_pen, CPen* s
 
 		
 	} 
-
-	// Draw all plots in existing_plots with value < 6 and delete plots with values >= 6
 	
 	
 	dc->RestoreDC(s_dc);

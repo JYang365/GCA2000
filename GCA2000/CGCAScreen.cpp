@@ -62,7 +62,6 @@ void CGCAScreen::draw_glideslope_axes(CDC* dc, const CRect area, CPen* pen, cons
 	dc->SelectObject(pen);
 
 	// Draw altitude axis
-	//dc->Rectangle(area);
 	dc->MoveTo(area.left, area.bottom);
 	dc->LineTo(area.left, area.top);
 
@@ -79,24 +78,31 @@ void CGCAScreen::draw_glideslope_axes(CDC* dc, const CRect area, CPen* pen, cons
 
 		if (i == 0)
 			continue;
-		auto label = std::to_string(i * alt_tick_height);
+		auto label = std::to_string(static_cast<int>(i * alt_tick_height));
 		dc->TextOutA(area.left - 15, area.bottom - i * alt_tick, label.c_str());
 	}
 	// Draw track distance axis
 	dc->MoveTo(area.left, area.bottom);
 	dc->LineTo(area.right, area.bottom);
-	const double num_ticks = static_cast<double>(max_range / 1); // max_range / 1: 1NM between ticks
+	const double num_ticks = static_cast<double>(max_range / 1) * 2; // max_range / 1: 1NM between ticks | *2 to include half-ticks every 0.5nm
 	const double range_tick = area.Width() / num_ticks;
 	for (auto i = 0; i <= num_ticks; i++)
 	{
+		if (i % 2 != 0)
+		{
+			// Half-tick
+			dc->MoveTo(area.left + i * range_tick, area.bottom - 5);
+			dc->LineTo(area.left + i * range_tick, area.bottom + 5);
+			continue;
+		}
 		dc->MoveTo(area.left + i * range_tick, area.bottom - 10);
 		dc->LineTo(area.left + i * range_tick, area.bottom + 10);
-		if (i == 0)
+		if (i == 0) //No label for the threshold tick
 			continue;
-		if (i % 2 != 0)
+		if (i % 2 != 0) // Label every 2 half-ticks = 1NM
 			continue;
-		auto label = std::to_string(static_cast<int>(i * 1)); // i * 1: 1NM between ticks
-		dc->SetTextAlign(TA_TOP);
+		auto label = std::to_string(static_cast<int>(i * 1 / 2)); // i * 1: 1NM between ticks | / 2 to convert half-ticks to NM
+		dc->SetTextAlign(TA_CENTER);
 		dc->TextOutA(area.left + i * range_tick, area.bottom + 15, label.c_str());
 	}
 	
@@ -243,22 +249,30 @@ void CGCAScreen::draw_track_axes(CDC* dc, const CRect area, CPen* pen, const dou
 		dc->TextOutA(area.left - 15, mid_point.y - i * tickHeight, top_label.c_str());
 		dc->TextOutA(area.left - 15, mid_point.y + i * tickHeight, bottom_label.c_str());
 	}
-	// Draw middle axis
+	// Draw middle horizontal axis
 	dc->MoveTo(area.left, mid_point.y);
 	dc->LineTo(area.right, mid_point.y);
 	// Draw ticks
-	const double num_ticks = static_cast<int>(max_range / 1); //EDIT FROM: static_cast<int>(max_range / 2.5); => space between ticks
-	const double tick_width = area.Width() / num_ticks;
+	const double num_ticks = static_cast<int>(max_range / 1) * 2; // max_range / 1: 1NM between ticks | *2 to include half-ticks every 0.5nm
+	const double tick_width = area.Width() / num_ticks ;
 	for (auto i = 0; i <= num_ticks; i++)
 	{
+		if (i % 2 != 0)
+		{
+			// Half-tick
+			dc->MoveTo(area.left + i * tick_width, mid_point.y - 5);
+			dc->LineTo(area.left + i * tick_width, mid_point.y + 5);
+			continue;
+		}
+
 		dc->MoveTo(area.left + i * tick_width, mid_point.y - 10);
 		dc->LineTo(area.left + i * tick_width, mid_point.y + 10);
 		if (i == 0)
 			continue;
 		if (i % 2 != 0)
 			continue;
-		auto label = std::to_string(static_cast<int>(i * 1)); //EDIT FROM: auto label = std::to_string(static_cast<int>(i * 2.5)); => space between ticks
-		dc->SetTextAlign(TA_TOP);
+		auto label = std::to_string(static_cast<int>(i * 1 / 2));  // i * 1: 1NM between ticks | / 2 to convert half-ticks to NM
+		dc->SetTextAlign(TA_CENTER);
 		dc->TextOutA(area.left + i * tick_width, mid_point.y + 15, label.c_str());
 	}
 	dc->RestoreDC(s_dc);
