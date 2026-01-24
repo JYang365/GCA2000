@@ -5,10 +5,12 @@
 class CGCALabel
 {
 public:
-	CGCALabel(EuroScopePlugIn::CRadarTarget track, EuroScopePlugIn::CPosition threshold, int threshold_altitude, int heading, double glide_slope);
+	CGCALabel(EuroScopePlugIn::CRadarTarget track, EuroScopePlugIn::CPosition threshold, double threshold_altitude, double heading, double glide_slope);
 	double get_track_distance() const;
 	double get_track_deviation() const;
 	double get_glidepath_deviation() const;
+	double get_altitude() const;
+	std::string get_callsign() const;
 
 private:
 	// Calculated or retrieved parameters
@@ -20,11 +22,11 @@ private:
 	double TrackDistance;
 
 	// Passed and stored parameters
-	int FinalApproachHeading;
+	double FinalApproachHeading;
 	double GlideslopeAngle;
 	EuroScopePlugIn::CPosition RadarTrackPosition;
 	EuroScopePlugIn::CPosition RunwayThreshold;
-	int ThresholdAltitude;
+	double ThresholdAltitude;
 
 	// Calculation of label elements
 	void calculate_track_distance();
