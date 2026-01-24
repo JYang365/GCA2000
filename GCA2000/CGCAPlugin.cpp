@@ -21,3 +21,5 @@ EuroScopePlugIn::CRadarScreen* CGCAPlugin::OnRadarScreenCreated(const char* s_di
 void CGCAPlugin::OnNewMetarReceived(const char* s_station, const char* s_full_metar)
 {
 }
+
+

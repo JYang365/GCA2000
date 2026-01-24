@@ -9,14 +9,16 @@
 
 CGCAScreen::CGCAScreen(void)
 {
-	description_ = "EPKS PAR 29";
-	lat_ = "N052.19.36.15";
-	lon_ = "E016.58.57.79";
-	altitude_ = 274;
-	obstacle_clearance_height_ = 280;
-	heading_ = 294;
+	description_ = "ICAO PAR 00"; // TO FIX: VALUES ARE NEVER OVERRIDEN BY ASR CONTENT
+	lat_ = "N000.00.00.00";
+	lon_ = "E000.00.00.00";
+	altitude_ = 0;
+	obstacle_clearance_height_ = 0;
+	heading_ = 0;
 	glide_slope_ = 3.0;
-	scope_max_height_ = 3000;
+	scope_max_height_ = 6000;
+	max_range_ = 20;
+	max_track_error_ = 3;
 }
 
 CGCAScreen::~CGCAScreen(void)
@@ -26,30 +28,31 @@ void CGCAScreen::OnAsrContentLoaded(bool loaded)
 {
 	const char* p_value;
 	if ((p_value = GetDataFromAsr("Description")) != nullptr)
-		description_ = p_value;
+		this->description_ = p_value;
 	if ((p_value = GetDataFromAsr("Longitude")) != nullptr)
-		lon_ = p_value;
+		this->lon_ = p_value;
 	if ((p_value = GetDataFromAsr("Latitude")) != nullptr)
-		lat_ = p_value;
+		this->lat_ = p_value;
 	if ((p_value = GetDataFromAsr("Altitude")) != nullptr)
-		altitude_ = atoi(p_value);
+		this->altitude_ = atof(p_value);
 	if ((p_value = GetDataFromAsr("Heading")) != nullptr)
-		heading_ = atoi(p_value);
+		this->heading_ = atof(p_value);
 	if ((p_value = GetDataFromAsr("Slope")) != nullptr)
-		glide_slope_ = atof(p_value);
-	if (glide_slope_ > 8.0)
-		glide_slope_ = 8.0;
-	if (glide_slope_ <= 0.0)
-		glide_slope_ = 1.0;
+		this->glide_slope_ = atof(p_value);
+	if (this->glide_slope_ > 8.0)
+		this->glide_slope_ = 8.0;
+	if (this->glide_slope_ <= 0.0)
+		this->glide_slope_ = 1.0;
 	if ((p_value = GetDataFromAsr("OCH")) != nullptr)
-		obstacle_clearance_height_ = atoi(p_value);
+		this->obstacle_clearance_height_ = atof(p_value);
+	if ((p_value = GetDataFromAsr("Maximum Range")) != nullptr)
+		this->max_range_ = atof(p_value);
 
 	runway_position_.LoadFromStrings(lon_, lat_);
-	scope_max_height_ = altitude_ + static_cast<int>(20.0 * 6076.0 * sin(glide_slope_ / 180.0 * M_PI));
 }
 
 
-void CGCAScreen::draw_glideslope_axes(CDC* dc, const CRect area, CPen* pen, const unsigned max_range = 20, const unsigned max_alt = 16000) const
+void CGCAScreen::draw_glideslope_axes(CDC* dc, const CRect area, CPen* pen, const double max_range = 20, const double max_alt = 6000) const
 {
 	// Store current dc
 	// ReSharper disable once CppInconsistentNaming
@@ -62,34 +65,44 @@ void CGCAScreen::draw_glideslope_axes(CDC* dc, const CRect area, CPen* pen, cons
 	dc->MoveTo(area.left, area.bottom);
 	dc->LineTo(area.left, area.top);
 
-	const auto num_v_ticks = static_cast<int>(max_alt / 4000);
-	const auto alt_tick = area.Height() / num_v_ticks;
+	const double alt_tick_height = 1000.0;
+
+	const double num_v_ticks = static_cast<double>(max_alt / alt_tick_height);
+	const double alt_tick = area.Height() / num_v_ticks;
 	dc->SetTextColor(RGB(172, 36, 51));
 	dc->SetTextAlign(TA_RIGHT);
 	for (auto i = 0; i <= num_v_ticks; i++)
 	{
 		dc->MoveTo(area.left - 10, area.bottom - i * alt_tick);
 		dc->LineTo(area.left + 10, area.bottom - i * alt_tick);
+
 		if (i == 0)
 			continue;
-		auto label = std::to_string(i * 4000);
+		auto label = std::to_string(static_cast<int>(i * alt_tick_height));
 		dc->TextOutA(area.left - 15, area.bottom - i * alt_tick, label.c_str());
 	}
 	// Draw track distance axis
 	dc->MoveTo(area.left, area.bottom);
 	dc->LineTo(area.right, area.bottom);
-	const auto num_ticks = static_cast<int>(max_range / 2.5);
-	const auto range_tick = area.Width() / num_ticks;
+	const double num_ticks = static_cast<double>(max_range / 1) * 2; // max_range / 1: 1NM between ticks | *2 to include half-ticks every 0.5nm
+	const double range_tick = area.Width() / num_ticks;
 	for (auto i = 0; i <= num_ticks; i++)
 	{
+		if (i % 2 != 0)
+		{
+			// Half-tick
+			dc->MoveTo(area.left + i * range_tick, area.bottom - 5);
+			dc->LineTo(area.left + i * range_tick, area.bottom + 5);
+			continue;
+		}
 		dc->MoveTo(area.left + i * range_tick, area.bottom - 10);
 		dc->LineTo(area.left + i * range_tick, area.bottom + 10);
-		if (i == 0)
+		if (i == 0) //No label for the threshold tick
 			continue;
-		if (i % 2 != 0)
+		if (i % 2 != 0) // Label every 2 half-ticks = 1NM
 			continue;
-		auto label = std::to_string(static_cast<int>(i * 2.5));
-		dc->SetTextAlign(TA_TOP);
+		auto label = std::to_string(static_cast<int>(i * 1 / 2)); // i * 1: 1NM between ticks | / 2 to convert half-ticks to NM
+		dc->SetTextAlign(TA_CENTER);
 		dc->TextOutA(area.left + i * range_tick, area.bottom + 15, label.c_str());
 	}
 	
@@ -113,41 +126,51 @@ void CGCAScreen::draw_deviation_cross(CDC* dc, const CRect area, CPen* pen) cons
 }
 
 
-void CGCAScreen::draw_glideslope(CDC* dc, const CRect area, CPen* pen, const unsigned maxRange, const unsigned maxAlt) const
+void CGCAScreen::draw_glideslope(CDC* dc, const CRect area, CPen* pen, const double max_range, const double max_alt) const
 {
 	// Store current dc
 	const auto s_dc = dc->SaveDC();
 	dc->SelectObject(pen);
-	const auto slope_radians = glide_slope_ * M_PI / 180;
-	const auto slope_max_alt = tan(slope_radians) * maxRange * 6076;
-	dc->MoveTo(area.left, area.bottom);
-	dc->LineTo(area.right, area.bottom - (slope_max_alt / maxAlt * area.Height()));
+	const double slope_radians = glide_slope_ * M_PI / 180.0;
+	//const auto slope_max_alt = tan(slope_radians) * max_range * 6076; //6076: NM => ft
+	const double x_end_gs_nm = (max_alt - 50) / 6076.11 / tan(slope_radians); //6076.11: ft => NM and 50ft above threshold
+	const double x_end_gs = area.left + x_end_gs_nm / max_range * area.Width();
+	dc->MoveTo(area.left, area.bottom - 50/max_alt * area.Height()); //50ft above threshold on usual approach
+	dc->LineTo(x_end_gs, area.top);
+
+	////Draw ILS intercept test bars
+	//dc->MoveTo(area.left - 20, area.bottom - 4663 / max_alt * area.Height());
+	//dc->LineTo(area.right + 20, area.bottom - 4663 / max_alt * area.Height());
+	//dc->MoveTo(area.left - 20, area.bottom - 5000 / max_alt * area.Height());
+	//dc->LineTo(area.right + 20, area.bottom - 5000 / max_alt * area.Height());
+	//dc->MoveTo(area.left + 14.5 / max_range * area.Width(), area.bottom);
+	//dc->LineTo(area.left + 14.5 / max_range * area.Width(), area.top);
 	// Restore previous dc
 	dc->RestoreDC(s_dc);
 }
 
-void CGCAScreen::draw_radar_cursors(CDC* dc, const CRect area, CPen* pen, const unsigned max_range, const unsigned max_alt) const
+void CGCAScreen::draw_radar_cursors(CDC* dc, const CRect area, CPen* pen, const double max_range, const double max_alt) const
 {
 	const auto s_dc = dc->SaveDC();
 	dc->SelectObject(pen);
-	const auto up_slope_radians = (glide_slope_ + 6) * M_PI / 180;
-	const auto down_slope_radians = (glide_slope_ - 2) * M_PI / 180;
+	const auto up_slope_radians = (glide_slope_ + 6) * M_PI / 180.0;
+	const auto down_slope_radians = (glide_slope_ - 2) * M_PI / 180.0;
 	const auto up_max_alt = tan(up_slope_radians) * max_range * 6076;
 	const auto down_max_alt = tan(down_slope_radians) * max_range * 6076;
-	dc->MoveTo(area.left, area.bottom);
-	dc->LineTo(area.right, area.bottom - (up_max_alt / max_alt * area.Height()));
-	dc->MoveTo(area.left, area.bottom);
-	dc->LineTo(area.right, area.bottom - (down_max_alt / max_alt * area.Height()));
+	dc->MoveTo(area.left, area.bottom - 50 / 6000.0 * area.Height());  //50ft above threshold on usual approach | 10 is arbitrary value
+	dc->LineTo(area.right, area.bottom - (up_max_alt / max_alt * area.Height())); //10 is arbitrary value
+	dc->MoveTo(area.left, area.bottom - 50 / 6000.0 * area.Height());  //50ft above threshold on usual approach | 10 is arbitrary value
+	dc->LineTo(area.right, area.bottom - (down_max_alt / max_alt * area.Height())); //10 is arbitrary value
 	dc->RestoreDC(s_dc);
 }
 
 
-void CGCAScreen::draw_obstacle_clearance_height(CDC* dc, const CRect area, CPen* pen, const unsigned max_range, const unsigned max_alt) const
+void CGCAScreen::draw_obstacle_clearance_height(CDC* dc, const CRect area, CPen* pen, const double max_range, const double max_alt) const
 {
 	// Store current dc
 	const auto s_dc = dc->SaveDC();
 	dc->SelectObject(pen);
-	const auto slope_radians = glide_slope_ * M_PI / 180;
+	const auto slope_radians = glide_slope_ * M_PI / 180.0;
 	// Show Obstacle Clearance Height
 	const auto obstacle_clearance_height_distance = (1 / tan(slope_radians)) * (obstacle_clearance_height_ / 6076.0);
 	const auto obstacle_clearance_height_center_x = area.left + obstacle_clearance_height_distance / max_range * area.Width();
@@ -164,7 +187,7 @@ void CGCAScreen::draw_glideslope_runway(CDC* dc, const CRect area, CPen* pen)
 	const auto s_dc = dc->SaveDC();
 	dc->SelectObject(pen);
 	dc->MoveTo(0, area.bottom);
-	dc->LineTo(area.left + 50, area.bottom);
+	dc->LineTo(area.left, area.bottom);
 	dc->RestoreDC(s_dc);
 }
 
@@ -180,26 +203,26 @@ void CGCAScreen::draw_middle_text(CDC* dc, const CRect area) const
 	auto* def_font = dc->SelectObject(&arial);
 	std::string top_label = "GS: ";
 	top_label.append(std::to_string(glide_slope_).substr(0, 3));
-	top_label.append("°        RWY: ");
-	top_label.append(std::to_string(heading_));
+	top_label.append("°        OCH: ");
+	top_label.append(std::to_string(static_cast<int>(obstacle_clearance_height_)));
 	std::string wind_dir = "270"; // TODO: Add wind from METAR
 	std::string wind_spd = "15";  // TODO: Add wind from METAR
 	std::string qnh = "1013";    // TODO: Add QNH from METAR
-	std::string bot_label = "WIND: ";
-	bot_label.append(wind_dir);
+	/*std::string bot_label = "WIND: ";
+	bot_label.append(wind_dir); // HIDDEN BECAUSE OF LACK OF METAR SUPPORT
 	bot_label.append("° / ");
 	bot_label.append(wind_spd);
 	bot_label.append("KT ALT: ");
-	bot_label.append(qnh);
+	bot_label.append(qnh);*/
 	dc->TextOutA(area.left + 20, mid_point.y - 15, top_label.c_str());
-	dc->TextOutA(area.left + 20, mid_point.y, bot_label.c_str());
+	//dc->TextOutA(area.left + 20, mid_point.y, bot_label.c_str());
 	dc->SelectObject(def_font);
 	arial.DeleteObject();
 	dc->RestoreDC(s_dc);
 }
 
 
-void CGCAScreen::draw_track_axes(CDC* dc, const CRect area, CPen* pen, const unsigned max_range, const int max_track_error) const
+void CGCAScreen::draw_track_axes(CDC* dc, const CRect area, CPen* pen, const double max_range, const int max_track_error) const
 {
 	const auto s_dc = dc->SaveDC();
 	dc->SelectObject(pen);
@@ -209,7 +232,7 @@ void CGCAScreen::draw_track_axes(CDC* dc, const CRect area, CPen* pen, const uns
 	dc->MoveTo(area.left, area.bottom);
 	dc->LineTo(area.left, area.top);
 	// Draw ticks
-	const auto numVTicks = static_cast<int>(max_track_error / 8000);
+	const auto numVTicks = 4; // EDIT FROM: static_cast<int>(max_track_error / 8000);
 	const auto tickHeight = area.Height() / (2*numVTicks);
 	for (auto i = 0; i <= numVTicks; i++)
 	{
@@ -226,22 +249,30 @@ void CGCAScreen::draw_track_axes(CDC* dc, const CRect area, CPen* pen, const uns
 		dc->TextOutA(area.left - 15, mid_point.y - i * tickHeight, top_label.c_str());
 		dc->TextOutA(area.left - 15, mid_point.y + i * tickHeight, bottom_label.c_str());
 	}
-	// Draw middle axis
+	// Draw middle horizontal axis
 	dc->MoveTo(area.left, mid_point.y);
 	dc->LineTo(area.right, mid_point.y);
 	// Draw ticks
-	const auto num_ticks = static_cast<int>(max_range / 2.5);
-	const auto tick_width = area.Width() / num_ticks;
+	const double num_ticks = static_cast<int>(max_range / 1) * 2; // max_range / 1: 1NM between ticks | *2 to include half-ticks every 0.5nm
+	const double tick_width = area.Width() / num_ticks ;
 	for (auto i = 0; i <= num_ticks; i++)
 	{
+		if (i % 2 != 0)
+		{
+			// Half-tick
+			dc->MoveTo(area.left + i * tick_width, mid_point.y - 5);
+			dc->LineTo(area.left + i * tick_width, mid_point.y + 5);
+			continue;
+		}
+
 		dc->MoveTo(area.left + i * tick_width, mid_point.y - 10);
 		dc->LineTo(area.left + i * tick_width, mid_point.y + 10);
 		if (i == 0)
 			continue;
 		if (i % 2 != 0)
 			continue;
-		auto label = std::to_string(static_cast<int>(i * 2.5));
-		dc->SetTextAlign(TA_TOP);
+		auto label = std::to_string(static_cast<int>(i * 1 / 2));  // i * 1: 1NM between ticks | / 2 to convert half-ticks to NM
+		dc->SetTextAlign(TA_CENTER);
 		dc->TextOutA(area.left + i * tick_width, mid_point.y + 15, label.c_str());
 	}
 	dc->RestoreDC(s_dc);
@@ -254,7 +285,7 @@ void CGCAScreen::draw_track_runway(CDC* dc, const CRect area, CPen* pen)
 	const auto mid_point = area.CenterPoint();
 	dc->SelectObject(pen);
 	dc->MoveTo(0, mid_point.y);
-	dc->LineTo(area.left + 50, mid_point.y);
+	dc->LineTo(area.left, mid_point.y);
 	dc->RestoreDC(s_dc);
 }
 
@@ -264,11 +295,11 @@ void CGCAScreen::OnAsrContentToBeSaved(void)
 	SaveDataToAsr("Description", "PAR description", description_);
 	SaveDataToAsr("Longitude", "RWY threshold longitude", lon_);
 	SaveDataToAsr("Latitude", "RWY threshold latitude", lat_);
-	str.Format("%d", altitude_);
+	str.Format("%f", altitude_);
 	SaveDataToAsr("Altitude", "RWY threshold altitude", str);
-	str.Format("%d", obstacle_clearance_height_);
+	str.Format("%f", obstacle_clearance_height_);
 	SaveDataToAsr("OCH", "Obstacle Clearance Height", str);
-	str.Format("%d", heading_);
+	str.Format("%f", heading_);
 	SaveDataToAsr("Heading", "RWY heading", str);
 	str.Format("%.1f", glide_slope_);
 	SaveDataToAsr("Slope", "Glide slope angle", str);
@@ -292,12 +323,13 @@ void CGCAScreen::OnRefresh(const HDC hDC, const int phase)
 	CPen gre_pen_dashed(PS_DASH, 1, RGB(34, 85, 48));
 	CPen wht_pen(0, 2, RGB(255, 255, 255));
 	CPen org_pen(0, 2, RGB(255, 127, 80));
+	CPen blk_pen(0, 2, RGB(0, 0, 0));
     CPen* p_old_pen = dc.SelectObject(&red_pen);
 	// Get drawing area
-	CRect radar_area = GetRadarArea();
+	CRect full_radar_area = GetRadarArea();
     const CRect chat_area = GetChatArea();
-	radar_area.bottom = chat_area.top;
 	// Add margins
+	CRect radar_area = GetRadarArea();
 	radar_area.DeflateRect(75, 50);
     const auto mid_point = radar_area.CenterPoint();
 	// Get Glideslope, track and cross areas
@@ -309,9 +341,15 @@ void CGCAScreen::OnRefresh(const HDC hDC, const int phase)
 	xs_area.DeflateRect(20, 20);
 
 	// Set maximum values
-	constexpr unsigned max_range = 20;
-	constexpr unsigned max_alt = 16000;
-	constexpr auto max_track_error = max_alt * 2;
+	double max_range = this->max_range_;
+	double max_alt = this->scope_max_height_;
+	double max_track_error = this->max_track_error_;
+	//Draw black rectangle background for radar area
+	dc.SelectObject(&blk_pen);
+	dc.SelectStockObject(BLACK_BRUSH);
+	dc.Rectangle(full_radar_area);
+	dc.SelectStockObject(NULL_BRUSH);
+
 	// ### GLIDESLOPE PORTION ###
 	draw_glideslope_axes(&dc, gs_area, &red_pen , max_range, max_alt);
 	// Draw cross
@@ -331,20 +369,24 @@ void CGCAScreen::OnRefresh(const HDC hDC, const int phase)
     for (auto radar_target = GetPlugIn()->RadarTargetSelectFirst(); radar_target.IsValid(); radar_target = GetPlugIn()->RadarTargetSelectNext(radar_target))
 	{
 		auto position = radar_target.GetPosition();
-		const auto distance = position.GetPosition().DirectionTo(runway_position_);
+		auto speed = radar_target.GetGS();
+		const auto distance = position.GetPosition().DistanceTo(runway_position_);
+		
     	// Skip tracks outside of maximum range
-		if (position.GetPosition().DistanceTo(runway_position_) > max_range)
+		if (distance > max_range || speed < 45)
 			continue;
+		
 		// Get angle to runway
 		const auto angle = position.GetPosition().DirectionTo(runway_position_);
 		const auto angle_diff = angle - heading_;
 
+		
 		// Skip tracks outside of bounds
-		if (fabs(angle_diff) > 15)
+		if (fabs(angle_diff) > 45)
 			continue;
-
+		
 		//CGCAPlot plot {radarTarget, RunwayPosition, Altitude, Heading, GlideSlope };
-		const auto *plot = new CGCAPlot(radar_target, runway_position_, gs_area, tk_area, xs_area, max_range, max_alt, 1000, 500,
+		const auto *plot = new CGCAPlot(radar_target, runway_position_, gs_area, tk_area, xs_area, max_range, max_alt, max_track_error, 500, //500ft of max dev for X deviation display
 		                                altitude_, glide_slope_, heading_);
 		plot->draw_plot(&dc, &wht_pen, &yel_pen, &org_pen);
 	}
