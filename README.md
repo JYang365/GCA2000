@@ -20,3 +20,5 @@ GCA-2000 is a plugin for Euroscope that simulates the PAR display of a GCA-2000 
 * Open the ASR with a text editor, enter the approach parameters
   --> /!\ Runway heading MUST BE true heading (course + magnetic deviation) /!\ 
 * Save the ASR file and open it in Euroscope, you're ready !
+
+<img width="2559" height="1324" alt="image" src="https://github.com/user-attachments/assets/754419e2-920c-409b-b191-6fdf873a55cd" />
