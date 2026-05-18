@@ -89,7 +89,7 @@ void CGCAPlot::draw_plot(CDC* dc, CPen* plot_pen, CPen* first_error_pen, CPen* s
 		dc->LineTo(x, y_track + 10.0);
 
 		//Draw tag
-		dc->SetTextColor(RGB(255, 255, 255));
+		dc->SetTextColor(RGB(24, 190, 219));
 		dc->SetTextAlign(TA_BOTTOM);
 		dc->TextOutA(x, y_track - 15, callsign.c_str());
 

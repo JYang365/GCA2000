@@ -69,7 +69,7 @@ void CGCAScreen::draw_glideslope_axes(CDC* dc, const CRect area, CPen* pen, cons
 
 	const double num_v_ticks = static_cast<double>(max_alt / alt_tick_height);
 	const double alt_tick = area.Height() / num_v_ticks;
-	dc->SetTextColor(RGB(172, 36, 51));
+	dc->SetTextColor(RGB(201, 155, 14));
 	dc->SetTextAlign(TA_RIGHT);
 	for (auto i = 0; i <= num_v_ticks; i++)
 	{
@@ -203,14 +203,14 @@ void CGCAScreen::draw_middle_text(CDC* dc, const CRect area) const
 	auto* def_font = dc->SelectObject(&arial);
 	std::string top_label = "GS: ";
 	top_label.append(std::to_string(glide_slope_).substr(0, 3));
-	top_label.append("°        OCH: ");
+	top_label.append("ï¿½        OCH: ");
 	top_label.append(std::to_string(static_cast<int>(obstacle_clearance_height_)));
 	std::string wind_dir = "270"; // TODO: Add wind from METAR
 	std::string wind_spd = "15";  // TODO: Add wind from METAR
 	std::string qnh = "1013";    // TODO: Add QNH from METAR
 	/*std::string bot_label = "WIND: ";
 	bot_label.append(wind_dir); // HIDDEN BECAUSE OF LACK OF METAR SUPPORT
-	bot_label.append("° / ");
+	bot_label.append("ï¿½ / ");
 	bot_label.append(wind_spd);
 	bot_label.append("KT ALT: ");
 	bot_label.append(qnh);*/
@@ -226,7 +226,7 @@ void CGCAScreen::draw_track_axes(CDC* dc, const CRect area, CPen* pen, const dou
 {
 	const auto s_dc = dc->SaveDC();
 	dc->SelectObject(pen);
-	dc->SetTextColor(RGB(172, 36, 51));
+	dc->SetTextColor(RGB(201, 155, 14));
 	const auto mid_point = area.CenterPoint();
 	// Draw vertical axis
 	dc->MoveTo(area.left, area.bottom);
@@ -316,7 +316,7 @@ void CGCAScreen::OnRefresh(const HDC hDC, const int phase)
     CDC     dc;
     dc.Attach(hDC);
 	// Creating pens
-	CPen red_pen(0, 2, RGB(172, 36, 51));
+	CPen red_pen(0, 2, RGB(201, 155, 14));
 	CPen blu_pen(0, 2, RGB(19, 97, 232));
 	CPen yel_pen(0, 2, RGB(223, 212, 36));
 	CPen gre_pen(0, 2, RGB(34, 85, 48));
