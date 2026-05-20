@@ -69,7 +69,7 @@ void CGCAScreen::draw_glideslope_axes(CDC* dc, const CRect area, CPen* pen, cons
 
 	const double num_v_ticks = static_cast<double>(max_alt / alt_tick_height);
 	const double alt_tick = area.Height() / num_v_ticks;
-	dc->SetTextColor(RGB(201, 155, 14));
+	dc->SetTextColor(RGB(217, 122, 7));
 	dc->SetTextAlign(TA_RIGHT);
 	for (auto i = 0; i <= num_v_ticks; i++)
 	{
@@ -198,19 +198,19 @@ void CGCAScreen::draw_middle_text(CDC* dc, const CRect area) const
 	const auto mid_point = area.CenterPoint();
 	CFont arial;
 	arial.CreatePointFont(100, _T("Arial"), dc);
-	dc->SetTextColor(RGB(170, 29, 93));
+	dc->SetTextColor(RGB(171, 254, 254));
 	dc->SetTextAlign(TA_LEFT);
 	auto* def_font = dc->SelectObject(&arial);
-	std::string top_label = "GS: ";
+	std::string top_label = "GS:   ";
 	top_label.append(std::to_string(glide_slope_).substr(0, 3));
-	top_label.append("�        OCH: ");
+	top_label.append("        RWY: ");
 	top_label.append(std::to_string(static_cast<int>(obstacle_clearance_height_)));
 	std::string wind_dir = "270"; // TODO: Add wind from METAR
 	std::string wind_spd = "15";  // TODO: Add wind from METAR
 	std::string qnh = "1013";    // TODO: Add QNH from METAR
 	/*std::string bot_label = "WIND: ";
 	bot_label.append(wind_dir); // HIDDEN BECAUSE OF LACK OF METAR SUPPORT
-	bot_label.append("� / ");
+	bot_label.append("° / ");
 	bot_label.append(wind_spd);
 	bot_label.append("KT ALT: ");
 	bot_label.append(qnh);*/
@@ -226,7 +226,7 @@ void CGCAScreen::draw_track_axes(CDC* dc, const CRect area, CPen* pen, const dou
 {
 	const auto s_dc = dc->SaveDC();
 	dc->SelectObject(pen);
-	dc->SetTextColor(RGB(201, 155, 14));
+	dc->SetTextColor(RGB(217, 122, 7));
 	const auto mid_point = area.CenterPoint();
 	// Draw vertical axis
 	dc->MoveTo(area.left, area.bottom);
@@ -316,11 +316,11 @@ void CGCAScreen::OnRefresh(const HDC hDC, const int phase)
     CDC     dc;
     dc.Attach(hDC);
 	// Creating pens
-	CPen red_pen(0, 2, RGB(201, 155, 14));
+	CPen red_pen(0, 2, RGB(217, 122, 7));
 	CPen blu_pen(0, 2, RGB(19, 97, 232));
 	CPen yel_pen(0, 2, RGB(223, 212, 36));
-	CPen gre_pen(0, 2, RGB(34, 85, 48));
-	CPen gre_pen_dashed(PS_DASH, 1, RGB(34, 85, 48));
+	CPen gre_pen(0, 2, RGB(130, 254, 250));
+	CPen gre_pen_dashed(PS_DASH, 1, RGB(144, 103, 217));
 	CPen wht_pen(0, 2, RGB(255, 255, 255));
 	CPen org_pen(0, 2, RGB(255, 127, 80));
 	CPen blk_pen(0, 2, RGB(0, 0, 0));
